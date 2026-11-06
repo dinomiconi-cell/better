@@ -1,1 +1,264 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silk Road Merchant</title>
+<style>
+body {
+  margin: 0;
+  font-family: Georgia, serif;
+  background: #e8d2a5;
+  color: #392514;
+  text-align: center;
+}
+header {
+  background: #754321;
+  color: white;
+  padding: 22px;
+}
+h1 { margin: 0; }
+main {
+  max-width: 850px;
+  margin: auto;
+  padding: 15px;
+}
+.panel {
+  background: #fff4d9;
+  border: 2px solid #a77b43;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+}
+.stats {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-weight: bold;
+}
+button {
+  background: #87512b;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 11px 16px;
+  margin: 5px;
+  cursor: pointer;
+  font-size: 15px;
+}
+button:hover { background: #b17b42; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+#log {
+  height: 150px;
+  overflow-y: auto;
+  text-align: left;
+  background: #f5e5c5;
+  padding: 10px;
+  border-radius: 7px;
+}
+.goods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(140px,1fr));
+  gap: 8px;
+}
+.goods div {
+  background: #f5e5c5;
+  padding: 10px;
+  border-radius: 8px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🐪 SILK ROAD MERCHANT</h1>
+  <p>An adventure across the ancient trading routes</p>
+</header>
+
+<main>
+  <div class="panel">
+    <h2>Your Caravan</h2>
+    <div class="stats">
+      <span>💰 Gold: <span id="gold">100</span></span>
+      <span>🥖 Food: <span id="food">20</span></span>
+      <span>🐪 Camels: <span id="camels">2</span></span>
+      <span>⭐ Score: <span id="score">0</span></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>📍 Current Location</h2>
+    <h3 id="city">Chang'an, China</h3>
+    <p id="description">Your journey begins in the great eastern trading city.</p>
+    <h3>Choose your destination</h3>
+    <div id="destinations"></div>
+  </div>
+
+  <div class="panel">
+    <h2>🏪 Trading Market</h2>
+    <div id="market" class="goods"></div>
+  </div>
+
+  <div class="panel">
+    <h2>🎒 Your Inventory</h2>
+    <div id="inventory" class="goods"></div>
+  </div>
+
+  <div class="panel">
+    <h2>📜 Adventure Log</h2>
+    <div id="log"></div>
+  </div>
+
+  <button onclick="restart()">🔄 Start New Journey</button>
+</main>
+
+<script>
+const cities = [
+  {name:"Chang'an, China", desc:"A wealthy city famous for silk and fine pottery.", prices:[10,8,15,12,20]},
+  {name:"Dunhuang", desc:"An oasis city beside the great desert.", prices:[14,10,18,15,22]},
+  {name:"Samarkand", desc:"A magnificent trading centre of Central Asia.", prices:[18,15,10,20,16]},
+  {name:"Bukhara", desc:"A city of merchants, scholars and beautiful markets.", prices:[20,18,12,15,14]},
+  {name:"Merv", desc:"An important crossroads of the ancient trade routes.", prices:[22,20,15,12,18]},
+  {name:"Baghdad", desc:"A thriving centre of learning and commerce.", prices:[25,22,18,20,12]},
+  {name:"Antioch", desc:"A major gateway to Mediterranean trade.", prices:[30,25,22,18,15]},
+  {name:"Constantinople", desc:"The great city linking Asia and Europe. You made it!", prices:[35,30,25,22,20]}
+];
+
+const items = ["Silk","Spices","Tea","Jade","Pottery"];
+const icons = ["🧵","🌶️","🍵","💎","🏺"];
+
+let gold, food, camels, score, locationIndex, inventory, gameOver;
+
+function restart() {
+  gold = 100;
+  food = 20;
+  camels = 2;
+  score = 0;
+  locationIndex = 0;
+  inventory = [0,0,0,0,0];
+  gameOver = false;
+  document.getElementById("log").innerHTML = "";
+  log("Your journey begins in Chang'an. Trade wisely!");
+  render();
+}
+
+function log(message) {
+  const box = document.getElementById("log");
+  box.innerHTML += "<p>• " + message + "</p>";
+  box.scrollTop = box.scrollHeight;
+}
+
+function render() {
+  document.getElementById("gold").textContent = gold;
+  document.getElementById("food").textContent = food;
+  document.getElementById("camels").textContent = camels;
+  document.getElementById("score").textContent = score;
+
+  let city = cities[locationIndex];
+  document.getElementById("city").textContent = city.name;
+  document.getElementById("description").textContent = city.desc;
+
+  document.getElementById("destinations").innerHTML =
+    locationIndex < cities.length-1
+    ? `<button onclick="travel()">Travel west ➜ ${cities[locationIndex+1].name}</button>`
+    : "<h3>🏆 You completed the Silk Road!</h3>";
+
+  document.getElementById("market").innerHTML = items.map((item,i) => `
+    <div>
+      ${icons[i]} <b>${item}</b>
+      <p>Price: ${city.prices[i]} gold</p>
+      <button onclick="buy(${i})" ${gameOver ? "disabled" : ""}>Buy 1</button>
+      <button onclick="sell(${i})" ${gameOver ? "disabled" : ""}>Sell 1</button>
+    </div>
+  `).join("");
+
+  document.getElementById("inventory").innerHTML = items.map((item,i) =>
+    `<div>${icons[i]} ${item}: <b>${inventory[i]}</b></div>`
+  ).join("");
+}
+
+function buy(i) {
+  if(gameOver) return;
+  let price = cities[locationIndex].prices[i];
+  if(gold < price) {
+    log("Not enough gold!");
+    return;
+  }
+  gold -= price;
+  inventory[i]++;
+  log("You bought 1 " + items[i] + ".");
+  render();
+}
+
+function sell(i) {
+  if(gameOver) return;
+  if(inventory[i] < 1) {
+    log("You don't have any " + items[i] + " to sell.");
+    return;
+  }
+  let price = cities[locationIndex].prices[i];
+  gold += price;
+  inventory[i]--;
+  score += 5;
+  log("You sold 1 " + items[i] + " for " + price + " gold.");
+  render();
+}
+
+function travel() {
+  if(gameOver || locationIndex >= cities.length-1) return;
+
+  if(food < 5) {
+    log("You need at least 5 food to travel!");
+    return;
+  }
+
+  food -= 5;
+  locationIndex++;
+
+  let event = Math.random();
+
+  if(event < 0.2) {
+    let loss = Math.min(gold,25);
+    gold -= loss;
+    log("⚔️ Bandits attacked! You lost " + loss + " gold.");
+  } else if(event < 0.4) {
+    food = Math.max(0,food-3);
+    log("🌪️ A sandstorm delayed your caravan. You lost 3 extra food.");
+  } else if(event < 0.6) {
+    let reward = 15;
+    gold += reward;
+    log("🤝 You helped a fellow merchant and received " + reward + " gold.");
+  } else if(event < 0.8) {
+    food += 5;
+    log("🌴 You found an oasis! You gained 5 food.");
+  } else {
+    log("☀️ Your journey was peaceful.");
+  }
+
+  if(camels > 0 && gold >= 30 && Math.random() < 0.15) {
+    gold += 10;
+    log("🐪 Your camels helped carry goods for another merchant. +10 gold!");
+  }
+
+  if(food <= 0) {
+    log("Your caravan ran out of food. The journey has ended!");
+    gameOver = true;
+  }
+
+  if(locationIndex === cities.length-1 && !gameOver) {
+    score += gold + inventory.reduce((a,b)=>a+b,0)*10;
+    log("🏆 Congratulations! You crossed the Silk Road and reached Constantinople!");
+    log("Final score: " + score);
+    gameOver = true;
+  }
+
+  render();
+}
+
+restart();
+</script>
+</body>
+</html>
+
